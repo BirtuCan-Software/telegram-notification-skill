@@ -1,0 +1,30 @@
+{
+  "name": "telegram-notification",
+  "version": "1.0.0",
+  "description": "Enterprise-grade CI/CD Telegram deployment notifications with atomic Start-Delete-Replace lifecycle, topic thread routing, HTML card formatting, elapsed duration tracking, and dual Composite Action / POSIX script execution.",
+  "author": "Senior AI Agent Architect & Principal DevOps Engineer",
+  "repository": "https://github.com/BirtuCan-Software/telegram-notification-skill",
+  "license": "Apache-2.0",
+  "specVersion": "1.0",
+  "entrypoint": "SKILL.md",
+  "discoveryPaths": {
+    "agentskills": ".agentskills/telegram-notification",
+    "antigravity": ".gemini/skills/telegram-notification",
+    "cursor": ".cursor/skills/telegram-notification",
+    "claude": ".claude/skills/telegram-notification",
+    "windsurf": ".windsurf/skills/telegram-notification",
+    "copilot": ".github/skills/telegram-notification"
+  },
+  "compatibility": {
+    "agents": [
+      "Antigravity",
+      "Cursor",
+      "Claude Code",
+      "Windsurf",
+      "GitHub Copilot",
+      "Vercel Skills CLI"
+    ],
+    "platforms": ["linux", "darwin", "win32"],
+    "python": ">=3.8"
+  }
+}

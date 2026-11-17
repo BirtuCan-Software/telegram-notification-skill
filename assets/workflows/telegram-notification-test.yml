@@ -1,0 +1,52 @@
+name: Test Telegram Notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_status:
+        description: "Notification status to test"
+        required: true
+        default: "success"
+        type: choice
+        options:
+          - success
+          - failure
+          - cancelled
+      simulate_delay:
+        description: "Simulated job duration in seconds"
+        required: false
+        default: "5"
+
+jobs:
+  test-notification:
+    name: Test Telegram Notification Lifecycle
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔔 Send Started Notification
+        id: tg_start
+        uses: BirtuCan-Software/telegram-notification-skill@v1
+        with:
+          bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          message_thread_id: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          action: start
+          custom_title: "Manual Test Run"
+
+      - name: ⏳ Simulate Work
+        run: |
+          echo "Simulating execution for ${{ inputs.simulate_delay }} seconds..."
+          sleep ${{ inputs.simulate_delay }}
+
+      - name: 🔔 Send Finished Notification (Delete Start & Replace)
+        if: always()
+        uses: BirtuCan-Software/telegram-notification-skill@v1
+        with:
+          bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          message_thread_id: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          action: finish
+          status: ${{ inputs.test_status }}
+          start_message_id: ${{ steps.tg_start.outputs.message_id }}
+          start_time: ${{ steps.tg_start.outputs.start_time }}
+          custom_title: "Manual Test Run"
+          deploy_url: ${{ vars.DEPLOY_URL }}

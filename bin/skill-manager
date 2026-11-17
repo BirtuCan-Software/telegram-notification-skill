@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Wrapper for skill-manager.py
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_BIN="python3"
+command -v python3 >/dev/null 2>&1 || PYTHON_BIN="python"
+exec "$PYTHON_BIN" "$SCRIPT_DIR/skill-manager.py" "$@"

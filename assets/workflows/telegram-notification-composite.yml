@@ -1,0 +1,67 @@
+name: Deployment with Telegram Notifications (Composite Action)
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+concurrency:
+  group: "deploy-${{ github.ref_name }}"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy Application
+    runs-on: ubuntu-latest
+    steps:
+      - name: "🔔 Telegram: Notify Deployment Started"
+        id: tg_start
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        uses: BirtuCan-Software/telegram-notification-skill@v1
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          message_thread_id: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          action: start
+
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 📦 Install Dependencies & Run Tests
+        run: |
+          npm ci
+          npm test --if-present
+
+      - name: 🏗️ Build Production Artifacts
+        run: npm run build
+
+      - name: 🚀 Deploy Application
+        run: |
+          echo "Deploying to production target..."
+
+      - name: "🔔 Telegram: Notify Deployment Finished"
+        if: always() && env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        uses: BirtuCan-Software/telegram-notification-skill@v1
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          message_thread_id: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          action: finish
+          status: ${{ job.status }}
+          start_message_id: ${{ steps.tg_start.outputs.message_id }}
+          start_time: ${{ steps.tg_start.outputs.start_time }}
+          deploy_url: ${{ vars.DEPLOY_URL }}

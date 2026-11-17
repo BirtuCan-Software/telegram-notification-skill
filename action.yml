@@ -1,0 +1,104 @@
+name: "Telegram Deployment Notification"
+description: "Zero-clutter CI/CD deployment notifications for Telegram with atomic Start-Delete-Replace lifecycle, topic thread routing, expandable error details, and rollback alerting."
+author: "BirtuCan Software"
+
+branding:
+  icon: "send"
+  color: "blue"
+
+inputs:
+  bot_token:
+    description: "Telegram Bot API token issued by @BotFather"
+    required: true
+  chat_id:
+    description: "Telegram chat, group, or channel ID (e.g. -100xxxxxxxxxx)"
+    required: true
+  message_thread_id:
+    description: "Optional thread/topic ID for Telegram forum supergroups"
+    required: false
+    default: ""
+  action:
+    description: "Notification action: 'start', 'finish', 'notify', or 'delete'"
+    required: false
+    default: "finish"
+  status:
+    description: "Status to report: 'success', 'failure', 'cancelled', 'rollback_success', 'rollback_failed', 'waiting_approval', 'warning', 'release'"
+    required: false
+    default: "success"
+  start_message_id:
+    description: "Message ID of the 'start' notification to delete during finish"
+    required: false
+    default: ""
+  start_time:
+    description: "Start timestamp (Unix epoch in seconds) for calculating run duration"
+    required: false
+    default: ""
+  deploy_url:
+    description: "Optional URL of the deployed application to include in the card"
+    required: false
+    default: ""
+  custom_title:
+    description: "Optional title prefix (defaults to 'Deployment')"
+    required: false
+    default: ""
+  commit_message:
+    description: "Optional explicit commit message (defaults to head commit message)"
+    required: false
+    default: ""
+  details:
+    description: "Optional error logs, release notes, or summary text rendered in an expandable blockquote"
+    required: false
+    default: ""
+  silent:
+    description: "Disable push notification sound and vibration on Telegram clients (true/false)"
+    required: false
+    default: "false"
+
+outputs:
+  message_id:
+    description: "The Telegram message ID returned by the Telegram Bot API"
+    value: ${{ steps.notify.outputs.message_id }}
+  start_time:
+    description: "The recorded start timestamp (Unix epoch in seconds)"
+    value: ${{ steps.notify.outputs.start_time }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Telegram Notification
+      id: notify
+      shell: bash
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ inputs.bot_token }}
+        TELEGRAM_CHAT_ID: ${{ inputs.chat_id }}
+        TELEGRAM_MESSAGE_THREAD_ID: ${{ inputs.message_thread_id }}
+        NOTIFICATION_TITLE: ${{ inputs.custom_title }}
+        DEPLOY_URL: ${{ inputs.deploy_url }}
+        NOTIFICATION_DETAILS: ${{ inputs.details }}
+        NOTIFICATION_SILENT: ${{ inputs.silent }}
+        COMMIT_MESSAGE: ${{ inputs.commit_message || github.event.head_commit.message }}
+      run: |
+        SCRIPT_PATH="${{ github.action_path }}/scripts/telegram-notify.sh"
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="./scripts/telegram-notify.sh"
+        fi
+
+        chmod +x "$SCRIPT_PATH" 2>/dev/null || true
+
+        ACTION="${{ inputs.action }}"
+        STATUS="${{ inputs.status }}"
+        START_MSG_ID="${{ inputs.start_message_id }}"
+        START_TIME="${{ inputs.start_time }}"
+
+        if [ "$ACTION" = "start" ]; then
+          "$SCRIPT_PATH" start
+        elif [ "$ACTION" = "finish" ]; then
+          "$SCRIPT_PATH" finish "$STATUS" "$START_MSG_ID" "$START_TIME"
+        elif [ "$ACTION" = "notify" ]; then
+          "$SCRIPT_PATH" notify "$STATUS"
+        elif [ "$ACTION" = "delete" ]; then
+          "$SCRIPT_PATH" delete "$START_MSG_ID"
+        else
+          echo "Unknown action: $ACTION"
+          exit 1
+        fi
